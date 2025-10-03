@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 
 const BASE_URL =
@@ -27,14 +27,15 @@ const StatusBadge = ({ status }) => {
 };
 
 export default function InventoryPage() {
-  const [searchParams] = useSearchParams();
   const location = useLocation();
   const business = location.state?.business || null;
 
-  const userId = searchParams.get("userId");
-  const skip = Number(searchParams.get("skip") ?? 0);
-  const take = Number(searchParams.get("take") ?? 20);
-  const sortBy = searchParams.get("sortBy") ?? "Newest";
+  // ✅ get userId from location.state (passed when navigating from QR scan)
+  const userId = location.state?.userId;
+
+  const [skip, setSkip] = useState(0);
+  const [take, setTake] = useState(20);
+  const [sortBy, setSortBy] = useState("Newest");
 
   const [list, setList] = useState(null);
   const [loading, setLoad] = useState(true);
@@ -46,14 +47,18 @@ export default function InventoryPage() {
 
   useEffect(() => {
     if (!userId) {
-      setErr("No userId in QR code");
+      setErr("No userId found (please scan a valid QR code).");
       setLoad(false);
       return;
     }
+
+    setLoad(true);
     axios
-      .get(BASE_URL, { params: { userId, skip, take, sortBy } })
+      .post(BASE_URL, { userId, skip, take, sortBy })
       .then((res) => setList(res.data))
-      .catch(() => setErr("Please scan a valid QR code or try again later."))
+      .catch(() =>
+        setErr("Please scan a valid QR code or try again later.")
+      )
       .finally(() => setLoad(false));
   }, [userId, skip, take, sortBy]);
 
@@ -74,11 +79,13 @@ export default function InventoryPage() {
     );
   }
 
-  const updateQuery = (newVals) => {
-    const p = new URLSearchParams(searchParams);
-    Object.entries(newVals).forEach(([k, v]) => p.set(k, v));
-    window.location.search = p.toString();
+  const nextPage = () => setSkip((prev) => prev + take);
+  const prevPage = () => setSkip((prev) => Math.max(0, prev - take));
+  const changeSort = (val) => {
+    setSortBy(val);
+    setSkip(0);
   };
+
   const sortOptions = [
     "Newest",
     "Oldest",
@@ -143,11 +150,15 @@ export default function InventoryPage() {
           {/* Left side - details */}
           <div className="business-details">
             <h1>{business.name}</h1>
-            <p><b>Address:</b> {business.address1}, {business.address2}</p>
+            <p>
+              <b>Address:</b> {business.address1}, {business.address2}
+            </p>
             <p>
               <b>State:</b> {business.state}, <b>Country:</b> {business.country}
             </p>
-            <p><b>📞</b> {business.mobileNumber ?? "Not Provided"}</p>
+            <p>
+              <b>📞</b> {business.mobileNumber ?? "Not Provided"}
+            </p>
           </div>
 
           {/* Right side - logo */}
@@ -168,10 +179,7 @@ export default function InventoryPage() {
         <>
           <div className="controls">
             <div className="pagination-bar">
-              <button
-                disabled={skip === 0}
-                onClick={() => updateQuery({ skip: Math.max(0, skip - take) })}
-              >
+              <button disabled={skip === 0} onClick={prevPage}>
                 Prev
               </button>
               <span>
@@ -180,14 +188,14 @@ export default function InventoryPage() {
               </span>
               <button
                 disabled={skip + take >= (list?.totalCount ?? 0)}
-                onClick={() => updateQuery({ skip: skip + take })}
+                onClick={nextPage}
               >
                 Next
               </button>
             </div>
             <select
               value={sortBy}
-              onChange={(e) => updateQuery({ sortBy: e.target.value, skip: 0 })}
+              onChange={(e) => changeSort(e.target.value)}
             >
               {sortOptions.map((o) => (
                 <option key={o} value={o}>
@@ -238,6 +246,7 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {/* Same styles as before */}
       <style>{`
         :root{
           --radius:12px;--shadow:0 2px 8px rgba(0,0,0,.08);--shadow-hover:0 4px 16px rgba(0,0,0,.12);
