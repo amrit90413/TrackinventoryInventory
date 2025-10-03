@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import axios from "axios";
 
-const BASE_URL = 'https://trackinventory.ddns.net/api/api/Mobile/GetAllInventoryMobilesByUser';
-const PLACEHOLDER = 'https://via.placeholder.com/400x400/cccccc/666666?text=No+Image';
+const BASE_URL = 'https://trackinventory.ddns.net/api/Mobile/GetAllInventoryMobilesByUser';
 
-/* ----------  status badge helpers ---------- */
+const PLACEHOLDER = "https://images.unsplash.com/photo-1580910051074-4c9aab67e3e8?auto=format&fit=crop&w=400&q=60";
+
+/* ---------- status badge helpers ---------- */
 const STATUS_MAP = {
-  0: { label: 'Warranty',       color: '#22c55e' }, // green
-  1: { label: 'Out of Warranty',color: '#f59e0b' }, // amber
-  2: { label: 'Damaged',        color: '#ef4444' }, // red
-  3: { label: 'Lost',           color: '#6b7280' }, // grey
-  4: { label: 'Stolen',         color: '#dc2626' }, // dark red
+  0: { label: "Warranty", color: "#22c55e" }, // green
+  1: { label: "Out of Warranty", color: "#f59e0b" }, // amber
+  2: { label: "Damaged", color: "#ef4444" }, // red
+  3: { label: "Lost", color: "#6b7280" }, // grey
+  4: { label: "Stolen", color: "#dc2626" }, // dark red
 };
 
 const StatusBadge = ({ status }) => {
@@ -25,61 +26,100 @@ const StatusBadge = ({ status }) => {
 
 export default function InventoryPage() {
   const [searchParams] = useSearchParams();
-  const userId = searchParams.get('userId');
-  const skip   = Number(searchParams.get('skip')  ?? 0);
-  const take   = Number(searchParams.get('take')  ?? 20);
-  const sortBy = searchParams.get('sortBy') ?? 'Newest';
+  const userId = searchParams.get("userId");
+  const skip = Number(searchParams.get("skip") ?? 0);
+  const take = Number(searchParams.get("take") ?? 20);
+  const sortBy = searchParams.get("sortBy") ?? "Newest";
 
-  const [list, setList]   = useState(null);
-  const [loading, setLoad]= useState(true);
-  const [error, setErr]   = useState(null);
+  const [list, setList] = useState(null);
+  const [loading, setLoad] = useState(true);
+  const [error, setErr] = useState(null);
   const [modalSrc, setModalSrc] = useState(null);
-  const openModal  = (src) => setModalSrc(src);
-  const closeModal = ()    => setModalSrc(null);
+  const openModal = (src) => setModalSrc(src);
+  const closeModal = () => setModalSrc(null);
 
   useEffect(() => {
-    if (!userId) { setErr('No userId in QR code'); setLoad(false); return; }
-    axios.get(BASE_URL, { params: { userId, skip, take, sortBy } })
-      .then(res => setList(res.data))
-      .catch(err => setErr(err.message ?? 'Network error'))
+    if (!userId) {
+      setErr("No userId in QR code");
+      setLoad(false);
+      return;
+    }
+    axios
+      .get(BASE_URL, { params: { userId, skip, take, sortBy } })
+      .then((res) => setList(res.data))
+      .catch(() => setErr("Please scan a valid QR code or try again later."))
       .finally(() => setLoad(false));
   }, [userId, skip, take, sortBy]);
 
-  if (loading) return <p>Loading…</p>;
-  if (error)   return <p style={{color:'red'}}>{error}</p>;
+  if (loading) return <p style={{ textAlign: "center" }}>Loading…</p>;
+
+  if (error) {
+    return (
+      <div className="center-wrapper">
+        <div className="error-card">
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+            alt="Error"
+          />
+          <h2>Error</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const updateQuery = (newVals) => {
     const p = new URLSearchParams(searchParams);
     Object.entries(newVals).forEach(([k, v]) => p.set(k, v));
     window.location.search = p.toString();
   };
-  const sortOptions = ['Newest','Oldest','Price ↑','Price ↓','Name A-Z','Name Z-A'];
+  const sortOptions = [
+    "Newest",
+    "Oldest",
+    "Price ↑",
+    "Price ↓",
+    "Name A-Z",
+    "Name Z-A",
+  ];
 
-  /* --------  IMAGE CAROUSEL (1 per card)  -------- */
+  /* -------- IMAGE CAROUSEL -------- */
   function ImageCarousel({ medias }) {
     const [idx, setIdx] = useState(0);
     const len = medias?.length || 0;
 
     useEffect(() => {
       if (len <= 1) return;
-      const t = setInterval(() => setIdx(i => (i + 1) % len), 3000);
+      const t = setInterval(() => setIdx((i) => (i + 1) % len), 3000);
       return () => clearInterval(t);
     }, [len]);
 
-    const next = () => setIdx(i => (i + 1) % len);
-    const prev = () => setIdx(i => (i - 1 + len) % len);
+    const next = () => setIdx((i) => (i + 1) % len);
+    const prev = () => setIdx((i) => (i - 1 + len) % len);
     const currentSrc = len ? medias[idx].original : PLACEHOLDER;
 
     return (
       <div className="carousel-wrapper">
-        <img src={currentSrc} alt="phone" className="carousel-img" onClick={() => openModal(currentSrc)} />
+        <img
+          src={currentSrc}
+          alt="phone"
+          className="carousel-img"
+          onClick={() => openModal(currentSrc)}
+        />
         {len > 1 && (
           <>
-            <button className="carousel-btn prev" onClick={prev}>‹</button>
-            <button className="carousel-btn next" onClick={next}>›</button>
+            <button className="carousel-btn prev" onClick={prev}>
+              ‹
+            </button>
+            <button className="carousel-btn next" onClick={next}>
+              ›
+            </button>
             <div className="carousel-dots">
               {medias.map((_, i) => (
-                <span key={i} className={i === idx ? 'dot active' : 'dot'} onClick={() => setIdx(i)} />
+                <span
+                  key={i}
+                  className={i === idx ? "dot active" : "dot"}
+                  onClick={() => setIdx(i)}
+                />
               ))}
             </div>
           </>
@@ -88,42 +128,74 @@ export default function InventoryPage() {
     );
   }
 
+  /* -------- RENDER -------- */
   return (
     <div className="inventory-page">
-      <div className="controls">
-        <div className="pagination-bar">
-          <button disabled={skip === 0} onClick={() => updateQuery({ skip: Math.max(0, skip - take) })}>Prev</button>
-          <span>Page {Math.floor(skip / take) + 1}  (total {list?.totalCount ?? 0})</span>
-          <button disabled={skip + take >= (list?.totalCount ?? 0)} onClick={() => updateQuery({ skip: skip + take })}>Next</button>
-        </div>
-        <select value={sortBy} onChange={(e) => updateQuery({ sortBy: e.target.value, skip: 0 })}>
-          {sortOptions.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      </div>
+      {list?.mobiles?.length ? (
+        <>
+          <div className="controls">
+            <div className="pagination-bar">
+              <button
+                disabled={skip === 0}
+                onClick={() => updateQuery({ skip: Math.max(0, skip - take) })}
+              >
+                Prev
+              </button>
+              <span>
+                Page {Math.floor(skip / take) + 1} (total{" "}
+                {list?.totalCount ?? 0})
+              </span>
+              <button
+                disabled={skip + take >= (list?.totalCount ?? 0)}
+                onClick={() => updateQuery({ skip: skip + take })}
+              >
+                Next
+              </button>
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => updateQuery({ sortBy: e.target.value, skip: 0 })}
+            >
+              {sortOptions.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="inventory-grid">
-        {list?.mobiles?.length ? (
-          list.mobiles.map(m => (
-            <div key={m.id} className="mobile-card">
-              <ImageCarousel medias={m.mobileMedias} />
-              <div className="card-body">
-                <h3>{m.name}</h3>
-                <div className="meta">{m.storage ?? 'N/A'} - {m.color ?? 'N/A'}</div>
-                <div className="badges">
-                  <StatusBadge status={m.productStatus} />
-                  <div className="battery">{m.batteryHealth}% battery</div>
+          <div className="inventory-grid">
+            {list.mobiles.map((m) => (
+              <div key={m.id} className="mobile-card">
+                <ImageCarousel medias={m.mobileMedias} />
+                <div className="card-body">
+                  <h3>{m.name}</h3>
+                  <div className="meta">
+                    {m.storage ?? "N/A"} - {m.color ?? "N/A"}
+                  </div>
+                  <div className="badges">
+                    <StatusBadge status={m.productStatus} />
+                    <div className="battery">{m.batteryHealth}% battery</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        ) : (
-          <div className="empty-card">
-            <img src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png" alt="Empty inventory" />
-            <h2>No Product Found</h2>
-            <p>Your inventory looks empty. Please add Product to see them here.</p>
+            ))}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <div className="center-wrapper">
+          <div className="empty-card">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png"
+              alt="Empty inventory"
+            />
+            <h2>No Product Found</h2>
+            <p>
+              Your inventory looks empty. Please add Product to see them here.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* full-screen modal */}
       {modalSrc && (
@@ -173,11 +245,12 @@ export default function InventoryPage() {
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes scaleUp{from{transform:scale(.9);opacity:.8}to{transform:scale(1);opacity:1}}
 
-        /* ---- empty card ---- */
-        .empty-card{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;padding:3rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow)}
-        .empty-card img{width:120px;height:120px;opacity:.7;margin-bottom:1rem}
-        .empty-card h2{margin:0 0 .5rem;font-size:1.3rem;color:var(--text)}
-        .empty-card p{margin:0;color:var(--text-light);font-size:.95rem;text-align:center}
+        /* ---- empty + error cards ---- */
+        .center-wrapper{display:flex;align-items:center;justify-content:center;min-height:70vh}
+        .empty-card,.error-card{background:#fff;padding:3rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;max-width:400px}
+        .empty-card img,.error-card img{width:120px;height:120px;opacity:.7;margin-bottom:1rem}
+        .empty-card h2,.error-card h2{margin:0 0 .5rem;font-size:1.3rem;color:var(--text)}
+        .empty-card p,.error-card p{margin:0;color:var(--text-light);font-size:.95rem;text-align:center}
       `}</style>
     </div>
   );

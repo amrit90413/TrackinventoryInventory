@@ -1,17 +1,19 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import InventoryPage from './InventoryPage';
+import { BrowserRouter, Routes, Route, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import InventoryPage from "./InventoryPage";
 
 function WebsiteRedirect() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { websiteName: paramWebsite } = useParams();   // from /Amrittest
+  const [searchParams] = useSearchParams();            // from /?websiteName=Amrittest
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        // get websiteName from query params (ex: /?websiteName=Amrittest)
-        const websiteName = searchParams.get("websiteName") || "Amrittest";
+        // Get websiteName either from params or query string
+        const websiteName =
+          paramWebsite || searchParams.get("websiteName") || "Amrittest";
 
         const res = await fetch(
           `https://trackinventory.ddns.net/api/User/GetUserId?websiteName=${websiteName}`
@@ -19,9 +21,9 @@ function WebsiteRedirect() {
         const data = await res.json();
 
         if (data?.userId) {
-          // redirect to inventory with skip/take/sort
+          // Redirect to inventory with default pagination + sorting
           navigate(
-            `/inventory?userId=${data.userId}&skip=0&take=20&sort= `,
+            `/inventory?userId=${data.userId}&skip=0&take=20&sortBy=Newest`,
             { replace: true }
           );
         } else {
@@ -37,7 +39,7 @@ function WebsiteRedirect() {
     };
 
     fetchUserId();
-  }, [navigate, searchParams]);
+  }, [navigate, paramWebsite, searchParams]);
 
   return loading ? <div>Loading...</div> : null;
 }
@@ -46,10 +48,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* 1. Instead of hardcoding, use WebsiteRedirect */}
+        {/* Handles /?websiteName=... */}
         <Route path="/" element={<WebsiteRedirect />} />
 
-        {/* 2. Your real inventory route */}
+        {/* Handles /Amrittest or any /:websiteName */}
+        <Route path="/:websiteName" element={<WebsiteRedirect />} />
+
+        {/* Inventory Page */}
         <Route path="/inventory" element={<InventoryPage />} />
       </Routes>
     </BrowserRouter>
