@@ -1,17 +1,24 @@
-import { BrowserRouter, Routes, Route, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useEffect, useState } from "react";
 import InventoryPage from "./InventoryPage";
 
 function WebsiteRedirect() {
   const navigate = useNavigate();
-  const { websiteName: paramWebsite } = useParams();   // from /Amrittest
-  const [searchParams] = useSearchParams();            // from /?websiteName=Amrittest
+  const { websiteName: paramWebsite } = useParams(); // from /Amrittest
+  const [searchParams] = useSearchParams(); // from /?websiteName=Amrittest
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        // Get websiteName either from params or query string
+        // websiteName from param or query string
         const websiteName =
           paramWebsite || searchParams.get("websiteName") || "Amrittest";
 
@@ -21,10 +28,10 @@ function WebsiteRedirect() {
         const data = await res.json();
 
         if (data?.userId) {
-          // Redirect to inventory with default pagination + sorting
+          // Pass userId in query params + send business in router state
           navigate(
             `/inventory?userId=${data.userId}&skip=0&take=20&sortBy=Newest`,
-            { replace: true }
+            { replace: true, state: { business: data } }
           );
         } else {
           console.error("User not found for websiteName:", websiteName);

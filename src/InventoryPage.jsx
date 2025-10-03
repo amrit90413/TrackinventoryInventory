@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import axios from "axios";
 
-const BASE_URL = 'https://trackinventory.ddns.net/api/Mobile/GetAllInventoryMobilesByUser';
+const BASE_URL =
+  "https://trackinventory.ddns.net/api/Mobile/GetAllInventoryMobilesByUser";
 
-const PLACEHOLDER = "https://images.unsplash.com/photo-1580910051074-4c9aab67e3e8?auto=format&fit=crop&w=400&q=60";
+const PLACEHOLDER =
+  "https://images.unsplash.com/photo-1580910051074-4c9aab67e3e8?auto=format&fit=crop&w=400&q=60";
 
 /* ---------- status badge helpers ---------- */
 const STATUS_MAP = {
@@ -26,6 +28,9 @@ const StatusBadge = ({ status }) => {
 
 export default function InventoryPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const business = location.state?.business || null;
+
   const userId = searchParams.get("userId");
   const skip = Number(searchParams.get("skip") ?? 0);
   const take = Number(searchParams.get("take") ?? 20);
@@ -35,6 +40,7 @@ export default function InventoryPage() {
   const [loading, setLoad] = useState(true);
   const [error, setErr] = useState(null);
   const [modalSrc, setModalSrc] = useState(null);
+
   const openModal = (src) => setModalSrc(src);
   const closeModal = () => setModalSrc(null);
 
@@ -131,6 +137,33 @@ export default function InventoryPage() {
   /* -------- RENDER -------- */
   return (
     <div className="inventory-page">
+      {/* ✅ Business header with logo on right, details on left */}
+      {business && (
+        <header className="business-header">
+          {/* Left side - details */}
+          <div className="business-details">
+            <h1>{business.name}</h1>
+            <p><b>Address:</b> {business.address1}, {business.address2}</p>
+            <p>
+              <b>State:</b> {business.state}, <b>Country:</b> {business.country}
+            </p>
+            <p><b>📞</b> {business.mobileNumber ?? "Not Provided"}</p>
+          </div>
+
+          {/* Right side - logo */}
+          <div className="business-logo-wrap">
+            <img
+              src={
+                business.logo ||
+                "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+              }
+              alt="Business Logo"
+              className="business-logo"
+            />
+          </div>
+        </header>
+      )}
+
       {list?.mobiles?.length ? (
         <>
           <div className="controls">
@@ -211,12 +244,22 @@ export default function InventoryPage() {
           --primary:#1976d2;--text:#212121;--text-light:#757575;--bg:#f5f5f5;--card-bg:#ffffff;
         }
         .inventory-page{background:var(--bg);min-height:100vh;padding:1rem}
+        
+        /* ---- business header ---- */
+        .business-header{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:var(--radius);padding:1.5rem 2rem;margin-bottom:2rem;box-shadow:var(--shadow)}
+        .business-details{flex:1}
+        .business-details h1{margin:0;font-size:1.6rem;color:var(--primary)}
+        .business-details p{margin:.2rem 0;color:var(--text-light)}
+        .business-logo-wrap{flex-shrink:0}
+        .business-logo{width:80px;height:80px;object-fit:cover;border-radius:50%;border:2px solid var(--primary)}
+        
         .controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem}
         .pagination-bar{display:flex;align-items:center;gap:.8rem}
         .pagination-bar button{border:1px solid var(--primary);background:#fff;color:var(--primary);padding:.4rem 1rem;border-radius:var(--radius);cursor:pointer;transition:background .2s,color .2s}
         .pagination-bar button:hover:not(:disabled){background:var(--primary);color:#fff}
         .pagination-bar button:disabled{opacity:.4;cursor:not-allowed}
         select{padding:.4rem .6rem;border-radius:var(--radius);border:1px solid #ccc;background:#fff}
+        
         .inventory-grid{display:grid;gap:1.5rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
         .mobile-card{background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column}
         .mobile-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
