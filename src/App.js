@@ -1,25 +1,57 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import InventoryPage from './InventoryPage';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+function WebsiteRedirect() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        // get websiteName from query params (ex: /?websiteName=Amrittest)
+        const websiteName = searchParams.get("websiteName") || "Amrittest";
+
+        const res = await fetch(
+          `https://trackinventory.ddns.net/api/User/GetUserId?websiteName=${websiteName}`
+        );
+        const data = await res.json();
+
+        if (data?.userId) {
+          // redirect to inventory with skip/take/sort
+          navigate(
+            `/inventory?userId=${data.userId}&skip=0&take=20&sort= `,
+            { replace: true }
+          );
+        } else {
+          console.error("User not found for websiteName:", websiteName);
+          navigate("/inventory?userId=not-found", { replace: true });
+        }
+      } catch (err) {
+        console.error("Error fetching userId:", err);
+        navigate("/inventory?userId=error", { replace: true });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserId();
+  }, [navigate, searchParams]);
+
+  return loading ? <div>Loading...</div> : null;
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* 1. Instead of hardcoding, use WebsiteRedirect */}
+        <Route path="/" element={<WebsiteRedirect />} />
+
+        {/* 2. Your real inventory route */}
+        <Route path="/inventory" element={<InventoryPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
