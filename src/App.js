@@ -8,38 +8,41 @@ import {
 } from "react-router-dom";
 import { useEffect, useState } from "react";
 import InventoryPage from "./InventoryPage";
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 function WebsiteRedirect() {
   const navigate = useNavigate();
-  const { websiteName: paramWebsite } = useParams(); // from /Amrittest
-  const [searchParams] = useSearchParams(); // from /?websiteName=Amrittest
+  const { websiteName: paramWebsite } = useParams();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        // websiteName from param or query string
         const websiteName =
           paramWebsite || searchParams.get("websiteName") || "Amrittest";
 
         const res = await fetch(
-          `https://trackinventory.ddns.net/api/User/GetUserId?websiteName=${websiteName}`
+          `https://trackinventory.ddns.net/api/User/GetUserId?websiteName=${encodeURIComponent(
+            websiteName
+          )}`
         );
         const data = await res.json();
 
         if (data?.userId) {
-          // Pass userId in query params + send business in router state
-          navigate(
-            `/inventory?userId=${data.userId}&skip=0&take=20&sortBy=Newest`,
-            { replace: true, state: { business: data } }
-          );
+          // ✅ NO query string
+          navigate("/inventory", {
+            replace: true,
+            state: { business: data, userId: data.userId },
+          });
         } else {
-          console.error("User not found for websiteName:", websiteName);
-          navigate("/inventory?userId=not-found", { replace: true });
+          navigate("/inventory", { replace: true, state: { userId: null } });
         }
       } catch (err) {
-        console.error("Error fetching userId:", err);
-        navigate("/inventory?userId=error", { replace: true });
+        console.error(err);
+        navigate("/inventory", { replace: true, state: { userId: null } });
       } finally {
         setLoading(false);
       }
@@ -55,15 +58,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Handles /?websiteName=... */}
         <Route path="/" element={<WebsiteRedirect />} />
-
-        {/* Handles /Amrittest or any /:websiteName */}
         <Route path="/:websiteName" element={<WebsiteRedirect />} />
-
-        {/* Inventory Page */}
         <Route path="/inventory" element={<InventoryPage />} />
       </Routes>
     </BrowserRouter>
   );
-}
+};
